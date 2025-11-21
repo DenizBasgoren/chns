@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tatoeba german</title>
+    <style>
+        #next {
+            width: 90%;
+            padding: 10px;
+            margin: 5px;
+        }
+
+        #searchfield, #dictsearch {
+            width: 90%;
+            padding: 10px;
+        }
+
+        button, input {
+            border-color: rgb(0, 0, 116);
+            border-radius: 50px;
+            background-color: rgb(0, 0, 58);
+            text-align: center;
+        }
+
+        #dictsearch {
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <span>Tatoeba</span> #<span id="num"></span> (total: <span id="selectableN"></span>)
+    <br>
+    <p id="grm"></p>
+    <p id="eng"></p>
+    <button id="next">Next</button>
+    <input type="text" id="searchfield" placeholder="Filter sentences by word">
+    <br>
+    <input type="checkbox" id="wholewordsonly"> Whole words only (when searching)
+    <br>
+    <input type="checkbox" id="hidegrm"> Hide german sentences
+    <br>
+    <input type="checkbox" id="hideeng"> Hide english sentences
+    <br>
+    <input type="text" id="dictsearch" placeholder="Search german word in dictionary">
+    <br>
+    <span id="dictionary"></span>
+    
+    <script>
+
+let data;
+let dataInd = location.search.replace("?", "")
+fetch(`grm_tato/${dataInd}.txt`).then(r => r.text()).then(r => { data = r.split('\n').map(l => l.split('\t')); newsentence(); })
+
+let selectableWords = Array(20000).fill(0).map((v,i)=>i)
+document.getElementById('selectableN').innerText = selectableWords.length
+
+function newsentence() {
+    let len = selectableWords.length
+    if (len==0) {
+        document.getElementById('eng').innerText = '-'
+        document.getElementById('grm').innerText = '-'
+        document.getElementById('num').innerText = ''
+    }
+    else {
+        let ind = Math.floor(Math.random()*len)
+        let eng = data[selectableWords[ind]][3]
+        let grm = data[selectableWords[ind]][1]
+    
+        document.getElementById('eng').innerText = eng
+        document.getElementById('grm').innerText = grm
+        document.getElementById('num').innerText = selectableWords[ind]
+    }
+
+    let hideEng = document.getElementById('hideeng').checked
+    let hideGrm = document.getElementById('hidegrm').checked
+    
+    document.getElementById('eng').style.opacity = hideEng ? '0' : '1'
+    document.getElementById('grm').style.opacity = hideGrm ? '0' : '1'
+    
+}
+
+function isWordInSentence(sentence, word) {
+    // Convert the sentence to lowercase for case-insensitive comparison
+    sentence = sentence.toLowerCase();
+
+    // Use a regular expression to match words (including words with punctuation)
+    const words = sentence.match(/\b\w+\b/g);
+
+    // Check if the word is present in the array of words
+    return words && words.includes(word.toLowerCase());
+}
+
+function filter() {
+    let word = document.getElementById('searchfield').value
+
+    word = word.trim()
+
+    if (word == '') {
+        selectableWords = Array(20000).fill(0).map((v,i)=>i)
+    }
+    else {
+        selectableWords = []
+
+        let grmList = [], engList = []
+
+        let wholeWordsOnly = document.getElementById('wholewordsonly').checked
+        
+        if (wholeWordsOnly) {
+            for (let i = 0; i<20000; i++) {
+                if (isWordInSentence(data[i][0], word)) {
+                    grmList.push(i)
+                }
+                else if (isWordInSentence(data[i][1], word)) {
+                    engList.push(i)
+                }
+            }
+        }
+        else {
+            for (let i = 0; i<20000; i++) {
+                if (data[i][1].indexOf(word) >= 0) {
+                    grmList.push(i)
+                } else if (data[i][3].indexOf(word) >= 0) {
+                    engList.push(i)
+                }
+            }
+        }
+
+        if (grmList.length > engList.length) {
+            selectableWords = grmList
+        }
+        else {
+            selectableWords = engList
+        }
+            
+        
+    }
+
+    document.getElementById('selectableN').innerText = selectableWords.length
+    newsentence()
+}
+
+
+
+
+function toggleVisibility() {
+    this.style.opacity = (this.style.opacity == '0') ? '1' : '0'
+}
+
+document.getElementById('next').onclick = newsentence
+document.getElementById('searchfield').oninput = filter
+document.getElementById('wholewordsonly').oninput = filter
+document.getElementById('eng').onclick = toggleVisibility
+document.getElementById('grm').onclick = toggleVisibility
+
+</script>
+</body>
+</html>
